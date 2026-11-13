@@ -4,111 +4,111 @@
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Arch](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-orange.svg)
 
-**[Italiano](#italiano) | [English](#english)**
+**[Español](#espanol) | [English](#english)**
 
 ---
 
-<a name="italiano"></a>
-## Italiano
+<a name="espanol"></a>
+## Español
 
-Add-on nativo per **Home Assistant** che consente il controllo **100% locale** e il monitoraggio completo della VMC **Aldes InspirAIR Home SC150** (tramite **Aldes Connect Box**), eliminando completamente la dipendenza dai server cloud Aldes.
+Complemento (add-on) nativo para **Home Assistant** que permite el control **100% local** y la monitorización completa de la unidad de VMC **Aldes InspirAIR Home SC150** (a través de **Aldes Connect Box**), eliminando por completo la dependencia de los servidores en la nube de Aldes.
 
-> **Disclaimer / Esclusione di Responsabilità**
-> Questo add-on è un progetto indipendente sviluppato a titolo amatoriale e open source. **L'autore non è in alcun modo affiliato, associato, autorizzato, sponsorizzato da, o ufficialmente collegato ad Aldes** (né ad alcuna delle sue consociate o affiliate).
-> L'utilizzo di questo software avviene a vostro esclusivo rischio. L'autore non si assume alcuna responsabilità per eventuali malfunzionamenti, blocchi, perdite di dati o danneggiamenti alla VMC Aldes InspirAIR Home SC150, al modulo Aldes Connect Box, all'impianto elettrico/idraulico o all'installazione di Home Assistant derivanti dall'uso di questo add-on.
+> **Aviso legal / Exclusión de responsabilidad**
+> Este complemento es un proyecto independiente de código abierto desarrollado con fines personales y educativos. **El autor no está de ninguna manera afiliado, asociado, autorizado, patrocinado ni conectado oficialmente con Aldes** (ni con ninguna de sus filiales o empresas asociadas).
+> El uso de este software se realiza bajo su propio riesgo. El autor no asume ninguna responsabilidad por posibles fallos de funcionamiento, bloqueos del sistema, pérdida de datos o daños en la unidad VMC Aldes InspirAIR Home SC150, el módulo Aldes Connect Box, la instalación eléctrica o de climatización, o la instalación de Home Assistant derivados del uso de este complemento.
 
-### Caratteristiche Principali
+### Características Principales
 
-- **Controllo 100% Locale (Cloud-Free):** Intercetta il traffico MQTT over TLS (porta `8883` rediretta localmente su `18883`) che la Connect Box invia verso `aldesiotsuite.azure-devices.net`, gestendo telemetria e comandi direttamente nella rete locale.
-- **Auto-Discovery MQTT Nativa:** Rileva automaticamente il broker Mosquitto di Home Assistant tramite le API del Supervisor e registra tutte le entità senza necessità di configurazione manuale in `configuration.yaml`.
-- **Selettore Modalità Operativa (`select`):** Controllo diretto delle modalità supportate dalla VMC:
-  * **Quotidiano (`V`)**
-  * **Cucina (`Y`)**
+- **Control 100% Local (Sin Nube):** Intercepta el tráfico MQTT sobre TLS (puerto `8883` redirigido localmente al `18883`) que la Connect Box envía hacia `aldesiotsuite.azure-devices.net`, gestionando la telemetría y los comandos directamente dentro de la red local.
+- **Auto-Discovery MQTT Nativo:** Detecta automáticamente el broker Mosquitto de Home Assistant a través de la API del Supervisor y registra todas las entidades sin necesidad de configuración manual en `configuration.yaml`.
+- **Selector de Modo de Funcionamiento (`select`):** Control directo de los modos de ventilación admitidos por la VMC:
+  * **Diario (`V`)**
+  * **Cocina (`Y`)**
   * **Boost (`X`)**
-  * **Vacanze (`W`)** — con generazione automatica della finestra temporale concatenata in formato UTC (`W<inizio_UTC>Z<fine_UTC>Z`).
-- **Verifica Comandi e Protezione Seriale:** Include un intervallo minimo di sicurezza (2 secondi) tra i pacchetti JSON-RPC per non saturare la comunicazione UART del modulo Wi-Fi (`HF-LPB100`) e un sistema di verifica automatica che reinvia il comando se la VMC non conferma il cambio modalità entro 15 secondi.
-- **Stabilità Connessione (Grace Timer & Timeout Esteso):**
-  * **Grace Timer (30s):** Maschera le micro-disconnessioni fisiologiche di ~5 secondi che la Connect Box effettua ogni 5 ore per il rinnovo del token di sessione, evitando falsi stati `Disconnesso` nello storico di Home Assistant.
-  * **Timeout TLS a 660s:** Calibrato sull'intervallo di invio telemetria della macchina (10 minuti) per prevenire disconnessioni da timeout di lettura.
-- **Monitoraggio Intelligente dei Filtri (`FilterTracker`):** Rileva automaticamente l'azzeramento del contatore `ff_cpt` effettuato dal display fisico della VMC dopo la sostituzione dei filtri, salvando la data su disco (`/config/aldes/filters.json`) e calcolando in autonomia giorni trascorsi, giorni residui e percentuale di usura.
+  * **Vacaciones (`W`)** — con generación automática de la ventana temporal concatenada en formato UTC (`W<inicio_UTC>Z<fin_UTC>Z`).
+- **Verificación de Comandos y Protección Serie:** Incluye un intervalo mínimo de seguridad (2 segundos) entre paquetes JSON-RPC para no saturar la comunicación serie UART del módulo Wi-Fi (`HF-LPB100`), junto con un sistema de verificación automática que reenvía el comando si la unidad no confirma el cambio de modo en un plazo de 15 segundos.
+- **Estabilidad de Conexión (Grace Timer y Timeout Extendido):**
+  * **Grace Timer (30s):** Enmascara las microdesconexiones normales de ~5 segundos que realiza la Connect Box cada 5 horas al renovar el token de sesión, evitando estados falsos de `Desconectado` en el historial de Home Assistant.
+  * **Timeout TLS de 660s:** Calibrado según el intervalo de envío de telemetría de la unidad (10 minutos) para evitar desconexiones por tiempo de espera de lectura.
+- **Monitorización Inteligente de Filtros (`FilterTracker`):** Detecta automáticamente la puesta a cero del contador `ff_cpt` realizada desde la pantalla física de la VMC tras sustituir los filtros, guardando la marca temporal en disco (`/config/aldes/filters.json`) y calculando de forma autónoma los días transcurridos, los días restantes y el porcentaje estimado de desgaste.
 
-### Prerequisito di Rete (DNS Locale)
+### Requisito de Red (DNS Local)
 
-La Aldes Connect Box tenta di collegarsi all'indirizzo cloud `aldesiotsuite.azure-devices.net` sulla porta TCP `8883`.
-Per redirigere il traffico verso Home Assistant senza modificare fisicamente la Connect Box, è necessario configurare una regola di **DNS Rewrite** sul proprio server DNS locale (es. **AdGuard Home**, **Pi-hole**, **UniFi**, **MikroTik** o router compatibile):
+La Aldes Connect Box intenta conectarse al dominio en la nube `aldesiotsuite.azure-devices.net` en el puerto TCP `8883`.
+Para redirigir el tráfico hacia Home Assistant sin modificar físicamente la Connect Box, es necesario configurar una regla de **reescritura DNS (DNS Rewrite)** en su servidor DNS local (por ejemplo, **AdGuard Home**, **Pi-hole**, **UniFi**, **MikroTik** o un router compatible):
 
 ```text
-aldesiotsuite.azure-devices.net  --->  <INDIRIZZO_IP_HOME_ASSISTANT>
+aldesiotsuite.azure-devices.net  --->  <DIRECCION_IP_HOME_ASSISTANT>
 ```
 
-All'avvio, l'add-on applica automaticamente una regola `iptables` (`PREROUTING`) che inoltra i pacchetti in arrivo sulla porta `8883` verso la porta interna `18883` del bridge TLS.
+Al iniciarse, el complemento aplica automáticamente una regla `iptables` (`PREROUTING`) que reenvía los paquetes entrantes del puerto `8883` al puerto interno `18883` del puente TLS.
 
-### Installazione su Home Assistant
+### Instalación en Home Assistant
 
-1. In Home Assistant, vai su **Impostazioni** → **Componenti aggiuntivi** → **Raccolta di componenti aggiuntivi**.
-2. Clicca sui **tre puntini** in alto a destra e seleziona **Repository**.
-3. Incolla l'URL di questo repository:
+1. En Home Assistant, ve a **Ajustes** → **Complementos** → **Tienda de complementos**.
+2. Haz clic en los **tres puntos** de la esquina superior derecha y selecciona **Repositorios**.
+3. Pega la URL de este repositorio:
    ```text
-   [https://github.com/David-PLC/aldes-bridge-sc150](https://github.com/David-PLC/aldes-bridge-sc150)
+   https://github.com/David-PLC/aldes-bridge-sc150
    ```
-4. Clicca su **Aggiungi** e poi chiudi la finestra.
-5. Cerca **Aldes Bridge SC150** nella lista dei componenti aggiuntivi, clicca su **Installa** e attiva le opzioni **Avvia all'avvio** e **Watchdog**.
+4. Haz clic en **Añadir** y luego cierra la ventana.
+5. Busca **Aldes Bridge SC150** en la lista de complementos, haz clic en **Instalar** y activa las opciones **Iniciar en el arranque** y **Watchdog**.
 
-### Configurazione
+### Configuración
 
-L'add-on funziona fin da subito con i valori predefiniti (rileva automaticamente il broker `core-mosquitto` di Home Assistant). Dalla scheda **Configurazione** dell'add-on è possibile personalizzare i seguenti parametri:
+El complemento funciona directamente con los valores predeterminados (detecta automáticamente el broker `core-mosquitto` de Home Assistant). Desde la pestaña **Configuración** del complemento se pueden personalizar los siguientes parámetros:
 
-| Opzione | Default | Descrizione |
+| Opción | Valor por defecto | Descripción |
 | :--- | :---: | :--- |
-| `mqtt_port` | `18883` | Porta locale su cui il server TLS ascolta la Connect Box (redirige `8883` → `18883`). |
-| `box_ip` | `""` | *(Opzionale)* Indirizzo IP della Connect Box per limitare la regola `iptables` solo al traffico proveniente dalla VMC. |
-| `filter_months` | `6` | Durata nominale dei filtri in mesi (`6` mesi = 180 giorni) utilizzata per il calcolo dei giorni residui. |
-| `language` | `"it"` | Lingua utilizzata per i nomi delle entità generate su Home Assistant (`translations/it.json`). |
-| `ha_mqtt_host` | `""` | *(Opzionale)* Host del broker MQTT. Lasciare vuoto per il rilevamento automatico tramite Supervisor. |
-| `ha_mqtt_port` | `1883` | Porta TCP del broker MQTT di Home Assistant. |
-| `ha_mqtt_user` | `""` | *(Opzionale)* Nome utente MQTT (se non gestito automaticamente dal Supervisor). |
-| `ha_mqtt_password` | `""` | *(Opzionale)* Password MQTT (se non gestita automaticamente dal Supervisor). |
+| `mqtt_port` | `18883` | Puerto local en el que el servidor TLS escucha a la Connect Box (redirige `8883` → `18883`). |
+| `box_ip` | `""` | *(Opcional)* Dirección IP de la Connect Box para limitar la regla `iptables` únicamente al tráfico procedente de la VMC. |
+| `filter_months` | `6` | Vida útil nominal de los filtros en meses (`6` meses = 180 días) utilizada para calcular los días restantes. |
+| `language` | `"it"` | Idioma utilizado para los nombres de las entidades generadas en Home Assistant (`translations/<lang>.json`). |
+| `ha_mqtt_host` | `""` | *(Opcional)* Host del broker MQTT. Déjalo vacío para la detección automática mediante la API del Supervisor. |
+| `ha_mqtt_port` | `1883` | Puerto TCP del broker MQTT de Home Assistant. |
+| `ha_mqtt_user` | `""` | *(Opcional)* Nombre de usuario MQTT (si no lo gestiona automáticamente el Supervisor). |
+| `ha_mqtt_password` | `""` | *(Opcional)* Contraseña MQTT (si no la gestiona automáticamente el Supervisor). |
 
-### Entità Esposte su Home Assistant
+### Entidades Expuestas en Home Assistant
 
-#### Controllo e Stato Connessione
-- `select.aldes_inspirair_home_sc150_modalita_vmc` — Selettore modalità (`Quotidiano`, `Cucina`, `Boost`, `Vacanze`)
-- `binary_sensor.aldes_inspirair_home_sc150_connessione_connect_box` — Stato connessione TLS della Connect Box
+#### Control y Conectividad
+- **Modo VMC (`select`)** — Selector de modo (`Diario` / `V`, `Cocina` / `Y`, `Boost` / `X`, `Vacaciones` / `W`)
+- **Conectividad Connect Box (`binary_sensor`)** — Estado de la conexión TLS de la Aldes Connect Box
 
-#### Monitoraggio Filtri
-- `sensor.aldes_inspirair_home_sc150_giorni_residui_filtro` — Giorni mancanti alla sostituzione del filtro
-- `sensor.aldes_inspirair_home_sc150_giorni_utilizzo_filtro` — Giorni trascorsi dall'ultimo reset
-- `sensor.aldes_inspirair_home_sc150_usura_stimata_filtro` — Percentuale di usura calcolata sulla durata impostata
-- `sensor.aldes_inspirair_home_sc150_ultimo_reset_filtro` — Data e ora dell'ultimo cambio/reset filtro rilevato
-- `sensor.aldes_inspirair_home_sc150_contatore_usura_filtro_box` — Contatore grezzo `ff_cpt` inviato dalla Connect Box
-- `sensor.aldes_inspirair_home_sc150_indice_depressione_filtri` — Indice depressione (`dep_ind`)
+#### Monitorización de Filtros
+- **Días Restantes de Filtro (`sensor`)** — Días restantes antes del reemplazo del filtro
+- **Días de Uso de Filtro (`sensor`)** — Días transcurridos desde el último reinicio detectado
+- **Desgaste Estimado de Filtro (`sensor`)** — Porcentaje de desgaste calculado según `filter_months`
+- **Último Reinicio de Filtro (`sensor`)** — Fecha y hora del último cambio o reinicio de filtro detectado
+- **Contador de Filtro Box (`sensor`)** — Valor bruto `ff_cpt` enviado por la Connect Box
+- **Índice de Depresión de Filtros (`sensor`)** — Indicador de pérdida de carga (`dep_ind`)
 
-#### Temperature, Portate e Ventilazione
-- `sensor.aldes_inspirair_home_sc150_temperatura_aria_esterna` (`outside_tpt`, °C)
-- `sensor.aldes_inspirair_home_sc150_temperatura_aria_estratta` (`ext_tpt`, °C)
-- `sensor.aldes_inspirair_home_sc150_temperatura_aria_espulsa` (`reject_tpt`, °C)
-- `sensor.aldes_inspirair_home_sc150_portata_estrazione` (`extf_flw`, m³/h)
-- `sensor.aldes_inspirair_home_sc150_portata_insufflazione` (`ffe_flw`, m³/h)
-- `sensor.aldes_inspirair_home_sc150_velocita_ventola_estrazione` (`extf_spd`, rpm)
-- `sensor.aldes_inspirair_home_sc150_velocita_ventola_insufflazione` (`vi_spd`, rpm)
-- `sensor.aldes_inspirair_home_sc150_livello_velocita_vmc` (`set_spd`)
-- `sensor.aldes_inspirair_home_sc150_stato_bypass` (`dtb_ind`)
-- `sensor.aldes_inspirair_home_sc150_codice_modalita_attiva` (`current_mode`)
-- `sensor.aldes_inspirair_home_sc150_versione_firmware_uc` / `versione_firmware_wi_fi` (`Vers_UC` / `Vers_W`)
+#### Temperaturas, Caudales y Ventilación
+- **Temperatura de Aire Exterior** (`outside_tpt`, °C)
+- **Temperatura de Aire Extraído** (`ext_tpt`, °C)
+- **Temperatura de Aire Expulsado** (`reject_tpt`, °C)
+- **Caudal de Extracción** (`extf_flw`, m³/h)
+- **Caudal de Impulsión** (`ffe_flw`, m³/h)
+- **Velocidad del Ventilador de Extracción** (`extf_spd`, rpm)
+- **Velocidad del Ventilador de Impulsión** (`vi_spd`, rpm)
+- **Nivel de Velocidad VMC** (`set_spd`)
+- **Estado del Bypass** (`dtb_ind`)
+- **Código de Modo Activo** (`current_mode`)
+- **Versión de Firmware UC / Wi-Fi** (`Vers_UC` / `Vers_W`)
 
-*(I sensori opzionali per sonde accessorie CO2, PM2.5, VOC e potenze elettriche vengono creati ma lasciati disabilitati di default per mantenere pulita l'interfaccia, e possono essere attivati manualmente da Home Assistant se presenti sull'impianto).*
+*(Los sensores opcionales para sondas accesorias de CO2, PM2.5, COV y consumo eléctrico se registran pero permanecen deshabilitados por defecto para mantener limpia la interfaz; pueden habilitarse manualmente desde Home Assistant si están instalados en el sistema).*
 
-### Architettura del Codice
+### Arquitectura del Código
 
-Il progetto è suddiviso in moduli Python indipendenti e commentati all'interno di `aldes-bridge/server/`:
+El proyecto está organizado en módulos de Python independientes y documentados dentro de `aldes-bridge/server/`:
 
-- `main.py` — Punto di ingresso dell'add-on e gestione dei segnali di sistema.
-- `bridge.py` — Gestione sessione TLS con la Connect Box, loop MQTT verso Home Assistant, verifica comandi e Grace Timer.
-- `discovery.py` — Generazione e pulizia dei payload di Auto-Discovery per Home Assistant.
-- `filters.py` — Logica di calcolo dell'usura filtri e rilevamento automatico dei reset da display (`FilterTracker`).
-- `models.py` — Catalogo strutturato (`SensorDefinition`) dei sensori di telemetria.
-- `config.py` — Caricamento variabili d'ambiente, traduzioni JSON e rilevamento automatico del broker Mosquitto.
-- `mqtt.py` / `tls.py` — Codec MQTT 3.1.1 leggero e generazione del contesto TLS compatibile con il modulo Wi-Fi `HF-LPB100`.
+- `main.py` — Punto de entrada del complemento y gestión de señales del sistema operativo.
+- `bridge.py` — Gestión de la sesión TLS con la Connect Box, bucle MQTT hacia Home Assistant, verificación de comandos y Grace Timer.
+- `discovery.py` — Generación y limpieza de los payloads de Auto-Discovery MQTT para Home Assistant.
+- `filters.py` — Lógica de cálculo de desgaste de filtros y detección automática de reinicios desde la pantalla física (`FilterTracker`).
+- `models.py` — Catálogo estructurado (`SensorDefinition`) de los sensores de telemetría.
+- `config.py` — Carga de variables de entorno, traducciones JSON y detección automática del broker Mosquitto.
+- `mqtt.py` / `tls.py` — Códec ligero MQTT 3.1.1 y generación del contexto TLS compatible con el módulo Wi-Fi `HF-LPB100`.
 
 ---
 
@@ -153,7 +153,7 @@ At startup, the add-on automatically applies an `iptables` (`PREROUTING`) rule t
 2. Click the **three dots** in the top-right corner and select **Repositories**.
 3. Paste the URL of this repository:
    ```text
-   [https://github.com/David-PLC/aldes-bridge-sc150](https://github.com/David-PLC/aldes-bridge-sc150)
+   https://github.com/David-PLC/aldes-bridge-sc150
    ```
 4. Click **Add**, then close the dialog.
 5. Find **Aldes Bridge SC150** in the add-on list, click **Install**, and enable **Start on boot** and **Watchdog**.
@@ -216,16 +216,16 @@ The project is organized into clean, documented Python modules inside `aldes-bri
 
 ---
 
-## Riconoscimenti / Acknowledgements
+## Reconocimientos / Acknowledgements
 
-Questo progetto nasce ed evolve grazie al lavoro di reverse engineering e condivisione della community open source / This project builds upon the reverse engineering and open-source contributions of the community:
+Este proyecto nace y evoluciona gracias al trabajo de ingeniería inversa y a las contribuciones de la comunidad de código abierto / This project builds upon the reverse engineering and open-source contributions of the community:
 
-- **[saniho/aldes-bridge](https://github.com/saniho/aldes-bridge)** — Per l'analisi originale del protocollo di comunicazione TLS/MQTT della Aldes Connect Box, la decodifica dei metodi JSON-RPC e l'idea alla base dell'intercettazione locale / *For the original reverse engineering of the Aldes Connect Box TLS/MQTT protocol, JSON-RPC method decoding, and local interception concept.*
-- **[Conedo95/aldes_vmc](https://github.com/Conedo95/aldes_vmc)** — Per gli spunti architetturali e la logica di tracciamento automatico del reset filtri (`ff_cpt`) da cui è stato adattato il modulo `filters.py` / *For architectural inspiration and the automatic filter reset tracking logic (`ff_cpt`) adapted in `filters.py`.*
+- **[saniho/aldes-bridge](https://github.com/saniho/aldes-bridge)** — Por el análisis original del protocolo de comunicación TLS/MQTT de la Aldes Connect Box, la decodificación de los métodos JSON-RPC y el concepto de interceptación local / *For the original reverse engineering of the Aldes Connect Box TLS/MQTT protocol, JSON-RPC method decoding, and local interception concept.*
+- **[Conedo95/aldes_vmc](https://github.com/Conedo95/aldes_vmc)** — Por la inspiración arquitectónica y la lógica de seguimiento automático del reinicio de filtros (`ff_cpt`) adaptada en el módulo `filters.py` / *For architectural inspiration and the automatic filter reset tracking logic (`ff_cpt`) adapted in `filters.py`.*
 
 ---
 
-## Licenza / License
+## Licencia / License
 
-Questo progetto è distribuito sotto licenza **MIT**. Consulta il file [LICENSE](LICENSE) per il testo integrale dei termini di utilizzo.  
+Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para ver el texto completo de los términos de uso.  
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for full details.
