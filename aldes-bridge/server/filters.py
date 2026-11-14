@@ -1,15 +1,15 @@
-"""Monitoraggio intelligente dell'usura dei filtri VMC.
+"""Monitorización inteligente del desgaste de los filtros de la VMC.
 
-La Connect Box invia il parametro `ff_cpt` (0-100) che rappresenta l'avanzamento
-dell'usura del filtro. Quando l'utente esegue il reset dei filtri dal display della VMC,
-`ff_cpt` riparte da 0.
+La Connect Box envía el parámetro `ff_cpt` (0-100), que representa el avance
+del desgaste del filtro. Cuando el usuario realiza el reinicio de los filtros desde la pantalla de la VMC,
+`ff_cpt` vuelve a empezar desde 0.
 
-Questo modulo:
-1. Riconosce automaticamente l'azzeramento di `ff_cpt` (o un calo di almeno FILTER_RESET_DROP punti).
-2. Salva la data esatta dell'ultimo reset nel file persistente `/config/aldes/filters.json`.
-3. Se non esiste ancora una data di reset salvata (primo avvio), la stima a ritroso a partire
-   dal valore attuale di `ff_cpt` e dalla durata configurata (`filter_months` * 30 giorni).
-4. Calcola i giorni trascorsi, i giorni rimanenti e la percentuale di usura.
+Este módulo:
+1. Reconoce automáticamente la puesta a cero de `ff_cpt` (o una caída de al menos FILTER_RESET_DROP puntos).
+2. Guarda la fecha exacta del último reinicio en el archivo persistente `/config/aldes/filters.json`.
+3. Si aún no existe una fecha de reinicio guardada (primer inicio), la estima hacia atrás a partir
+   del valor actual de `ff_cpt` y de la duración configurada (`filter_months` * 30 días).
+4. Calcula los días transcurridos, los días restantes y el porcentaje de desgaste.
 """
 import json
 import logging
@@ -27,7 +27,7 @@ FILTER_RESET_DROP = 10.0
 
 
 def is_filter_reset(previous_value: Optional[float], current_value: Optional[float]) -> bool:
-    """Restituisce True se il contatore ff_cpt e' stato azzerato o e' sceso di almeno 10 punti."""
+    """Devuelve True si el contador ff_cpt se ha puesto a cero o ha bajado al menos 10 puntos."""
     if previous_value is None or current_value is None:
         return False
     if previous_value > 0 and current_value == 0:
@@ -36,7 +36,7 @@ def is_filter_reset(previous_value: Optional[float], current_value: Optional[flo
 
 
 def estimate_last_reset(now: datetime, ff_cpt_value: float, duration_days: int) -> datetime:
-    """Stima la data dell'ultimo cambio filtro in base alla percentuale ff_cpt attuale."""
+    """Estima la fecha del último cambio de filtro según el porcentaje ff_cpt actual."""
     clamped_ff = max(0.0, min(100.0, float(ff_cpt_value)))
     elapsed_days = (clamped_ff / 100.0) * duration_days
     return now - timedelta(days=elapsed_days)
@@ -44,7 +44,7 @@ def estimate_last_reset(now: datetime, ff_cpt_value: float, duration_days: int) 
 
 @dataclass
 class FilterInfo:
-    """Riepilogo calcolato sullo stato attuale dei filtri VMC."""
+    """Resumen calculado sobre el estado actual de los filtros de la VMC."""
 
     last_reset: datetime
     elapsed_days: int
@@ -54,7 +54,7 @@ class FilterInfo:
 
 
 class FilterTracker:
-    """Gestisce il salvataggio su disco e il calcolo della vita residua dei filtri."""
+    """Gestiona el almacenamiento en disco y el cálculo de la vida útil restante de los filtros."""
 
     def __init__(self, filter_months: int = 6, storage_path: str = FILTER_STORAGE_PATH) -> None:
         self.filter_months = max(1, int(filter_months))
@@ -65,11 +65,11 @@ class FilterTracker:
 
     @property
     def duration_days(self) -> int:
-        """Durata totale del filtro in giorni (es. 6 mesi * 30 = 180 giorni)."""
+        """Duración total del filtro en días (p. ej. 6 meses * 30 = 180 días)."""
         return self.filter_months * DAYS_PER_FILTER_MONTH
 
     def load_from_disk(self) -> None:
-        """Carica la data dell'ultimo reset dal file JSON persistente."""
+        """Carga la fecha del último reinicio desde el archivo JSON persistente."""
         try:
             with open(self.storage_path, "r", encoding="utf-8") as file_handle:
                 stored_data = json.load(file_handle)
@@ -88,7 +88,7 @@ class FilterTracker:
             _log.warning("Impossibile leggere lo stato filtri da %s: %s", self.storage_path, exc)
 
     def save_to_disk(self) -> None:
-        """Salva in modo atomico la data dell'ultimo reset e l'ultimo valore ff_cpt."""
+        """Guarda de forma atómica la fecha del último reinicio y el último valor ff_cpt."""
         try:
             os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
             temp_path = self.storage_path + ".tmp"
@@ -103,7 +103,7 @@ class FilterTracker:
             _log.warning("Impossibile salvare lo stato filtri in %s: %s", self.storage_path, exc)
 
     def update_from_telemetry(self, raw_ff_cpt: Any, now: Optional[datetime] = None) -> Optional[FilterInfo]:
-        """Aggiorna lo stato del filtro quando arriva un nuovo pacchetto dalla Connect Box."""
+        """Actualiza el estado del filtro cuando llega un nuevo paquete desde la Connect Box."""
         if raw_ff_cpt is None:
             return self.get_info(now=now)
         try:
@@ -114,7 +114,7 @@ class FilterTracker:
         current_time = now or datetime.now(timezone.utc)
 
         if self.last_reset is None:
-            # Primo avvio assoluto: stimiamo la data di inizio partendo da ff_cpt
+            # Primer inicio absoluto: se estima la fecha de inicio partiendo de ff_cpt
             self.last_reset = estimate_last_reset(current_time, current_ff, self.duration_days)
             self.last_ff_cpt = current_ff
             _log.info(
@@ -124,7 +124,7 @@ class FilterTracker:
             )
             self.save_to_disk()
         elif is_filter_reset(self.last_ff_cpt, current_ff):
-            # Rilevato azzeramento dal display della VMC
+            # Detectada puesta a cero desde la pantalla de la VMC
             _log.info("Reset filtri rilevato! (ff_cpt passato da %s a %s)", self.last_ff_cpt, current_ff)
             self.last_reset = current_time
             self.last_ff_cpt = current_ff
@@ -136,7 +136,7 @@ class FilterTracker:
         return self.get_info(now=current_time)
 
     def get_info(self, now: Optional[datetime] = None) -> Optional[FilterInfo]:
-        """Calcola e restituisce i giorni trascorsi, i giorni rimanenti e la percentuale d'usura."""
+        """Calcula y devuelve los días transcurridos, los días restantes y el porcentaje de desgaste."""
         if self.last_reset is None:
             return None
         current_time = now or datetime.now(timezone.utc)

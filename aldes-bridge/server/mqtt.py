@@ -1,4 +1,4 @@
-"""Codec MQTT 3.1.1 nativo."""
+"""Códec MQTT 3.1.1 nativo."""
 import struct
 
 PT_CONNECT = 1

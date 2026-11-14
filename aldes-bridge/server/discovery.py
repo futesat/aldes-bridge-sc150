@@ -1,7 +1,7 @@
-"""Generazione e invio dei messaggi di Auto-Discovery MQTT per Home Assistant.
+"""Generación y envío de los mensajes de Auto-Discovery MQTT para Home Assistant.
 
-Questo modulo registra il dispositivo Aldes InspirAIR Home SC150 su Home Assistant
-insieme a tutte le sue entita' (Select modalita', Pulsanti, Sensori telemetria e Sensori filtro).
+Este módulo registra el dispositivo Aldes InspirAIR Home SC150 en Home Assistant
+junto con todas sus entidades (selector de modo, botones, sensores de telemetría y sensores de filtro).
 """
 import json
 from typing import TYPE_CHECKING
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
-    """Pubblica su Mosquitto la configurazione di tutte le entita' di Home Assistant."""
+    """Publica en Mosquitto la configuración de todas las entidades de Home Assistant."""
     translations = bridge.translations
     prefix = bridge.config.mqtt_prefix
 
@@ -28,7 +28,7 @@ def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
         wifi_ver = bridge.last_telemetry.get("Vers_W", "?")
         device_info["sw_version"] = f"UC {uc_ver} / Wi-Fi {wifi_ver}"
 
-    # 1. Pulizia automatica di vecchie entita' non piu' utilizzate
+    # 1. Limpieza automática de entidades antiguas ya no utilizadas
     obsolete_discovery_topics = [
         "homeassistant/climate/aldes/config",
         "homeassistant/water_heater/aldes_ballon/config",
@@ -40,7 +40,7 @@ def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
     for old_topic in obsolete_discovery_topics:
         bridge.publish_to_ha(old_topic, "")
 
-    # 2. Entita' SELECT principale per cambiare la modalita' della VMC (V, Y, X, W)
+    # 2. Entidad SELECT principal para cambiar el modo de la VMC (V, Y, X, W)
     select_config = {
         "name": translations.get("select_mode_name", "Modalit\u00e0 VMC"),
         "unique_id": "aldes_sc150_mode_select",
@@ -56,7 +56,7 @@ def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
         json.dumps(select_config, ensure_ascii=False),
     )
 
-    # 3. Pulsanti rapidi per forzare l'invio di una modalita'
+    # 3. Botones rápidos para forzar el envío de un modo
     button_translations = translations.get("buttons", {})
     mode_buttons = [
         ("mode_v", button_translations.get("mode_v", "Modalit\u00e0 Quotidiano (V)"), "mdi:home-clock"),
@@ -79,12 +79,12 @@ def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
             json.dumps(button_config, ensure_ascii=False),
         )
 
-    # 4. Sensori di telemetria standard definiti in server/models.py
+    # 4. Sensores de telemetría estándar definidos en server/models.py
     sensor_translations = translations.get("sensors", {})
     for sensor in TELEMETRY_SENSORS:
         discovery_topic = f"homeassistant/sensor/sc150_{sensor.sensor_id}/config"
         if not sensor.is_active:
-            # Se il sensore e' disattivato (es. RSSI), invia stringa vuota per rimuoverlo da HA
+            # Si el sensor está desactivado (p. ej. RSSI), envía una cadena vacía para eliminarlo de HA
             bridge.publish_to_ha(discovery_topic, "")
             continue
 
@@ -106,7 +106,7 @@ def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
 
         bridge.publish_to_ha(discovery_topic, json.dumps(sensor_config, ensure_ascii=False))
 
-    # 5. Sensori calcolati dal modulo FilterTracker (server/filters.py)
+    # 5. Sensores calculados por el módulo FilterTracker (server/filters.py)
     filter_sensors = [
         (
             "filter_remaining_days",
@@ -161,7 +161,7 @@ def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
             json.dumps(f_cfg, ensure_ascii=False),
         )
 
-    # 6. Sensore binario per lo stato di connessione della Aldes Connect Box
+    # 6. Sensor binario para el estado de conexión de la Aldes Connect Box
     connectivity_config = {
         "name": translations.get("box_connected_name", "Connessione Connect Box"),
         "unique_id": "aldes_sc150_box_connected",
@@ -178,6 +178,6 @@ def publish_homeassistant_discovery(bridge: "AldesBridge") -> None:
         json.dumps(connectivity_config, ensure_ascii=False),
     )
 
-    # Pubblica lo stato iniziale di disponibilita'
+    # Publica el estado inicial de disponibilidad
     bridge.publish_to_ha(f"{prefix}/state/available", "online")
     bridge.publish_to_ha(f"{prefix}/health/box_connected", "true" if bridge.box_connected else "false")

@@ -1,4 +1,4 @@
-"""Generazione certificato TLS self-signed per aldesiotsuite.azure-devices.net."""
+"""Generación de certificado TLS autofirmado para aldesiotsuite.azure-devices.net."""
 import os
 import ssl
 import tempfile

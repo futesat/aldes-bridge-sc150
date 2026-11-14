@@ -1,29 +1,29 @@
-# Changelog
+# Registro de Cambios (Changelog)
 
-Tutte le modifiche rilevanti a **Aldes Bridge SC150** sono documentate in questo file.
+Todos los cambios relevantes de **Aldes Bridge SC150** se documentan en este archivo.
 
 ## [2.2.2] - 2026-11-05
 
-### Ottimizzato
-- **Timeout TLS del socket**: elevato il timeout di lettura del socket a **660 secondi (11 minuti)** all'interno del gestore di sessione (`server/bridge.py`), eliminando alla radice le disconnessioni periodiche per timeout causate dai ritardi del modulo Wi-Fi HF-LPB100.
+### Optimizado
+- **Timeout TLS del socket**: aumentado el tiempo de espera de lectura del socket a **660 segundos (11 minutos)** dentro del gestor de sesión (`server/bridge.py`), eliminando de raíz las desconexiones periódicas por timeout causadas por los retrasos del módulo Wi-Fi HF-LPB100.
 
 ## [2.2.1] - 2026-11-05
 
-### Aggiunto
-- **Modifiche grafiche**: Aggiunta icona e logo
+### Añadido
+- **Cambios gráficos**: añadidos icono y logotipo.
 
 ## [2.2.0] - 2026-11-05
 
-### Aggiunto
-- **Monitoraggio intelligente dei filtri (`server/filters.py`)**: rilevamento automatico del reset filtri eseguito dal display della VMC (`ff_cpt`), salvataggio persistente della data di reset in `/config/aldes/filters.json` ed esposizione di 4 nuovi sensori dedicati (`Giorni Residui Filtro`, `Giorni Utilizzo Filtro`, `Usura Stimata Filtro`, `Ultimo Reset Filtro`).
-- **Opzione `filter_months`**: nuovo parametro nella configurazione dell'add-on per impostare la durata nominale dei filtri in mesi (default `6` mesi = 180 giorni).
-- **Filtro anti-disconnessione (Grace Timer 30s)**: eliminati i falsi stati `Disconnesso` di 5 secondi causati dal rinnovo sessione TLS che la Connect Box esegue ogni 5 ore.
+### Añadido
+- **Monitorización inteligente de filtros (`server/filters.py`)**: detección automática del reinicio de filtros realizado desde la pantalla de la VMC (`ff_cpt`), guardado persistente de la fecha de reinicio en `/config/aldes/filters.json` y exposición de 4 nuevos sensores dedicados (`Giorni Residui Filtro`, `Giorni Utilizzo Filtro`, `Usura Stimata Filtro`, `Ultimo Reset Filtro`).
+- **Opción `filter_months`**: nuevo parámetro en la configuración del complemento para establecer la duración nominal de los filtros en meses (por defecto `6` meses = 180 días).
+- **Filtro antidesconexión (Grace Timer 30s)**: eliminados los falsos estados `Desconectado` de 5 segundos causados por la renovación de sesión TLS que la Connect Box realiza cada 5 horas.
 
-### Modificato
-- **Architettura modulare del codice**: suddivisione del vecchio file monolitico in moduli specializzati e commentati (`models.py`, `config.py`, `filters.py`, `discovery.py`, `bridge.py`, `main.py`) con variabili standardizzate in inglese.
+### Modificado
+- **Arquitectura modular del código**: división del antiguo archivo monolítico en módulos especializados y documentados (`models.py`, `config.py`, `filters.py`, `discovery.py`, `bridge.py`, `main.py`) con variables estandarizadas en inglés.
 
 ## [2.1.3] - 2026-11-05
 
-### Corretto
-- **ModalitÃ  Vacanze (`W`)**: parametro `changeMode` formattato come stringa singola concatenata (`W<inizio_UTC>Z<fine_UTC>Z`).
-- **Normalizzazione fine riga LF**: garantiti fine riga Unix su `run.sh` e `apparmor.txt`.
+### Corregido
+- **Modo Vacaciones (`W`)**: parámetro `changeMode` formateado como una única cadena concatenada (`W<inicio_UTC>Z<fin_UTC>Z`).
+- **Normalización de saltos de línea LF**: garantizados los saltos de línea Unix en `run.sh` y `apparmor.txt`.

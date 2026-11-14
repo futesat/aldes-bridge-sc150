@@ -1,10 +1,10 @@
-"""Classe principale AldesBridge: gestisce la comunicazione tra Connect Box e Home Assistant.
+"""Clase principal AldesBridge: gestiona la comunicación entre la Connect Box y Home Assistant.
 
-Include:
-- Ascolto TLS sulla porta locale per la Connect Box.
-- Filtro anti-disconnessione (grace timer di 30s) per ignorare il riavvio sessione ogni 5 ore.
-- Integrazione con FilterTracker per il calcolo dei giorni residui del filtro.
-- Invio comandi JSON-RPC (inclusa la modalita' Vacanze 'W' con date concatenate).
+Incluye:
+- Escucha TLS en el puerto local para la Connect Box.
+- Filtro antidesconexión (grace timer de 30s) para ignorar el reinicio de sesión cada 5 horas.
+- Integración con FilterTracker para el cálculo de los días restantes del filtro.
+- Envío de comandos JSON-RPC (incluido el modo Vacaciones 'W' con fechas concatenadas).
 """
 import json
 import logging
@@ -25,13 +25,13 @@ from .tls import server_context
 
 _log = logging.getLogger("aldes-sc150")
 
-# Pausa minima (in secondi) tra due comandi inviati alla Connect Box per non saturare la UART
+# Pausa mínima (en segundos) entre dos comandos enviados a la Connect Box para no saturar la UART
 COMMAND_MIN_INTERVAL = 2.0
-# Tempo di attesa (in secondi) prima di verificare se la VMC ha recepito il cambio modalita'
+# Tiempo de espera (en segundos) antes de verificar si la VMC ha aplicado el cambio de modo
 COMMAND_VERIFY_TIMEOUT = 15.0
 
 def extract_json_dict(raw_payload: bytes | str) -> Optional[dict[str, Any]]:
-    """Estrae il dizionario JSON dal payload MQTT inviato dalla Connect Box."""
+    """Extrae el diccionario JSON del payload MQTT enviado por la Connect Box."""
     if isinstance(raw_payload, bytes):
         raw_payload = raw_payload.decode("utf-8", errors="replace")
     if not isinstance(raw_payload, str):
@@ -47,14 +47,14 @@ def extract_json_dict(raw_payload: bytes | str) -> Optional[dict[str, Any]]:
 
 
 class AldesBridge:
-    """Coordina il server TLS verso la VMC e il client MQTT verso Home Assistant."""
+    """Coordina el servidor TLS hacia la VMC y el cliente MQTT hacia Home Assistant."""
 
     def __init__(self, config: BridgeConfig) -> None:
         self.config = config
         self.translations = load_translations(config.language)
 
-        # Configurazione modalita' VMC: V, Y, X, W sono esposte nel selettore di Home Assistant,
-        # mentre Z (Programma aria) e' riconosciuta a codice ma non mostrata nella tendina.
+        # Configuración de modos de la VMC: V, Y, X, W se exponen en el selector de Home Assistant,
+        # mientras que Z (Programa de aire) se reconoce en el código pero no se muestra en el desplegable.
         mode_labels = self.translations.get("modes", {})
         self.exposed_modes: dict[str, str] = {
             "V": mode_labels.get("V", "Quotidiano"),
@@ -70,7 +70,7 @@ class AldesBridge:
             "Z": mode_labels.get("Z", "Programma aria"),
         }
 
-        # Stato connessione Connect Box e timer anti-disconnessione (per il ciclo delle 5 ore)
+        # Estado de conexión de la Connect Box y temporizador antidesconexión (para el ciclo de 5 horas)
         self.box_socket: Optional[socket.socket] = None
         self.box_lock = threading.Lock()
         self.box_connected: bool = False
@@ -79,27 +79,27 @@ class AldesBridge:
         self.rpc_command_id: int = 1
         self.box_packet_id: int = 1
         
-        # Coda di invio e verifica automatica esecuzione comandi
+        # Cola de envío y verificación automática de ejecución de comandos
         self.send_lock = threading.Lock()
         self.last_command_sent_at: float = 0.0
         self.pending_mode_code: Optional[str] = None
         self.verify_timer: Optional[threading.Timer] = None
 
-        # Stato connessione verso il broker Mosquitto di Home Assistant
+        # Estado de conexión hacia el broker Mosquitto de Home Assistant
         self.ha_socket: Optional[socket.socket] = None
         self.ha_lock = threading.Lock()
         self.ha_packet_id: int = 1
 
-        # Cache telemetria e tracker intelligente per i filtri
+        # Caché de telemetría y rastreador inteligente para los filtros
         self.last_telemetry: dict[str, Any] = self._load_telemetry_cache()
         self.filter_tracker = FilterTracker(filter_months=config.filter_months)
 
     # -------------------------------------------------------------------------
-    # Gestione cache telemetria su disco
+    # Gestión de caché de telemetría en disco
     # -------------------------------------------------------------------------
 
     def _load_telemetry_cache(self) -> dict[str, Any]:
-        """Carica l'ultima telemetria nota da disco per popolare subito i sensori all'avvio."""
+        """Carga la última telemetría conocida desde disco para poblar de inmediato los sensores al iniciar."""
         try:
             with open(TELEMETRY_CACHE_PATH, "r", encoding="utf-8") as file_handle:
                 cached = json.load(file_handle)
@@ -112,7 +112,7 @@ class AldesBridge:
         return {}
 
     def _save_telemetry_cache(self) -> None:
-        """Salva l'ultima telemetria ricevuta in modo atomico."""
+        """Guarda la última telemetría recibida de forma atómica."""
         try:
             os.makedirs(os.path.dirname(TELEMETRY_CACHE_PATH), exist_ok=True)
             temp_path = TELEMETRY_CACHE_PATH + ".tmp"
@@ -123,20 +123,20 @@ class AldesBridge:
             pass
 
     # -------------------------------------------------------------------------
-    # Gestione filtro anti-disconnessione (risolve il drop di 5 secondi ogni 5 ore)
+    # Gestión del filtro antidesconexión (resuelve la caída de 5 segundos cada 5 horas)
     # -------------------------------------------------------------------------
 
     def _cancel_disconnect_timer(self) -> None:
-        """Annulla il timer di disconnessione se la Box si e' riconnessa in tempo."""
+        """Cancela el temporizador de desconexión si la Box se ha reconectado a tiempo."""
         if self.disconnect_timer is not None:
             self.disconnect_timer.cancel()
             self.disconnect_timer = None
 
     def _schedule_disconnect_notification(self) -> None:
-        """Avvia un conto alla rovescia prima di segnalare la Box come disconnessa su HA.
+        """Inicia una cuenta atrás antes de notificar la Box como desconectada en HA.
 
-        Ogni 5 ore la Connect Box chiude la connessione TLS e la riapre dopo ~5 secondi.
-        Aspettando `disconnect_grace_seconds` (default 30s), evitiamo falsi stati 'Disconnesso'.
+        Cada 5 horas la Connect Box cierra la conexión TLS y la vuelve a abrir tras ~5 segundos.
+        Esperando `disconnect_grace_seconds` (por defecto 30s), evitamos falsos estados de 'Desconectado'.
         """
         self._cancel_disconnect_timer()
         grace_seconds = self.config.disconnect_grace_seconds
@@ -153,7 +153,7 @@ class AldesBridge:
         self.disconnect_timer.start()
 
     def _confirm_box_disconnected(self) -> None:
-        """Eseguito solo se la Box non si e' riconnessa entro il tempo di tolleranza."""
+        """Se ejecuta únicamente si la Box no se ha reconectado dentro del tiempo de tolerancia."""
         with self.box_lock:
             self.disconnect_timer = None
             if self.box_socket is None:
@@ -162,11 +162,11 @@ class AldesBridge:
                 self.publish_to_ha(f"{self.config.mqtt_prefix}/health/box_connected", "false")
 
     # -------------------------------------------------------------------------
-    # Comunicazione con la Aldes Connect Box (Server TLS)
+    # Comunicación con la Aldes Connect Box (Servidor TLS)
     # -------------------------------------------------------------------------
 
     def send_command_to_box(self, method: str, params: list[Any]) -> None:
-        """Invia un comando JSON-RPC alla Connect Box rispettando la pausa minima di 2 secondi."""
+        """Envía un comando JSON-RPC a la Connect Box respetando la pausa mínima de 2 segundos."""
         with self.send_lock:
             elapsed = time.monotonic() - self.last_command_sent_at
             if self.last_command_sent_at > 0 and elapsed < COMMAND_MIN_INTERVAL:
@@ -199,13 +199,13 @@ class AldesBridge:
                     _log.error("Errore durante l'invio del comando alla Box: %s", exc)
 
     def _cancel_verify_timer(self) -> None:
-        """Annulla il timer di verifica se il cambio modalita' e' gia' stato confermato."""
+        """Cancela el temporizador de verificación si el cambio de modo ya ha sido confirmado."""
         if self.verify_timer is not None:
             self.verify_timer.cancel()
             self.verify_timer = None
 
     def _verify_mode_applied(self, expected_code: str, params: list[Any]) -> None:
-        """Controlla dopo 15s se la VMC ha cambiato modalita'; in caso contrario reinvia una volta."""
+        """Comprueba tras 15s si la VMC ha cambiado de modo; en caso contrario reenvía el comando una vez."""
         self.verify_timer = None
         if self.pending_mode_code != expected_code:
             return
@@ -223,7 +223,7 @@ class AldesBridge:
             self.send_command_to_box("changeMode", params)
 
     def run_box_listener(self) -> None:
-        """Accetta in ciclo continuo le connessioni TLS provenienti dalla Connect Box."""
+        """Acepta en bucle continuo las conexiones TLS procedentes de la Connect Box."""
         tls_ctx = server_context("aldesiotsuite.azure-devices.net")
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -248,7 +248,7 @@ class AldesBridge:
                 _log.warning("Handshake TLS con la Box fallito: %s", exc)
 
     def _handle_box_session(self, tls_socket: socket.socket) -> None:
-        """Gestisce i pacchetti MQTT di una singola sessione TLS con la Connect Box."""
+        """Gestiona los paquetes MQTT de una sesión TLS individual con la Connect Box."""
         with self.box_lock:
             self._cancel_disconnect_timer()
             previous_socket = self.box_socket
@@ -335,11 +335,11 @@ class AldesBridge:
                 pass
 
     # -------------------------------------------------------------------------
-    # Pubblicazione stati e gestione comandi da Home Assistant
+    # Publicación de estados y gestión de comandos desde Home Assistant
     # -------------------------------------------------------------------------
 
     def publish_to_ha(self, topic: str, payload: Any, retain: bool = True) -> None:
-        """Pubblica un messaggio MQTT sul broker Mosquitto di Home Assistant."""
+        """Publica un mensaje MQTT en el broker Mosquitto de Home Assistant."""
         with self.ha_lock:
             if not self.ha_socket:
                 return
@@ -357,10 +357,10 @@ class AldesBridge:
                 pass
 
     def publish_telemetry(self, telemetry: dict[str, Any]) -> None:
-        """Formatta e pubblica su Home Assistant tutti i sensori e i calcoli del filtro."""
+        """Formatea y publica en Home Assistant todos los sensores y los cálculos del filtro."""
         prefix = self.config.mqtt_prefix
 
-        # 1. Pubblica i sensori standard
+        # 1. Publica los sensores estándar
         for sensor in TELEMETRY_SENSORS:
             if not sensor.is_active:
                 continue
@@ -382,7 +382,7 @@ class AldesBridge:
 
             self.publish_to_ha(f"{prefix}/state/sensor/{sensor.telemetry_key}", formatted_value)
 
-        # 2. Aggiorna e pubblica le metriche calcolate per i filtri
+        # 2. Actualiza y publica las métricas calculadas para los filtros
         filter_info = self.filter_tracker.update_from_telemetry(telemetry.get("ff_cpt"))
         if filter_info is not None:
             self.publish_to_ha(f"{prefix}/state/filter/filter_remaining_days", filter_info.remaining_days)
@@ -390,7 +390,7 @@ class AldesBridge:
             self.publish_to_ha(f"{prefix}/state/filter/filter_wear_percent", f"{filter_info.wear_percent:.1f}")
             self.publish_to_ha(f"{prefix}/state/filter/filter_last_reset", filter_info.last_reset.isoformat())
 
-        # 3. Sincronizza il selettore della modalita' VMC e verifica eventuali comandi in sospeso
+        # 3. Sincroniza el selector de modo de la VMC y verifica posibles comandos pendientes
         current_mode = str(telemetry.get("current_mode") or "").strip().upper()
         if self.pending_mode_code and current_mode == self.pending_mode_code:
             _log.info("Verifica superata: la VMC ha confermato il passaggio alla modalita' '%s'", current_mode)
@@ -406,7 +406,7 @@ class AldesBridge:
             )
 
     def apply_operating_mode(self, mode_code: str) -> None:
-        """Invia alla VMC la richiesta di cambio modalita' (V, Y, X oppure W) e ne verifica l'esito."""
+        """Envía a la VMC la solicitud de cambio de modo (V, Y, X o W) y verifica su resultado."""
         clean_code = mode_code.strip().upper()
         if clean_code == "W":
             start_utc = datetime.now(timezone.utc).replace(microsecond=0)
@@ -420,7 +420,7 @@ class AldesBridge:
         self._cancel_verify_timer()
         self.send_command_to_box("changeMode", params)
 
-        # Avvia la verifica solo se stiamo cambiando verso una modalita' diversa da quella attuale
+        # Inicia la verificación solo si se está cambiando hacia un modo distinto del actual
         if previous_mode != clean_code:
             self.pending_mode_code = clean_code
             self.verify_timer = threading.Timer(
@@ -436,11 +436,11 @@ class AldesBridge:
             self.publish_to_ha(f"{prefix}/state/select/mode", self.exposed_modes[clean_code])
         self.publish_to_ha(f"{prefix}/state/sensor/current_mode", clean_code)
 
-    # Alias di compatibilita' con eventuali script di test
+    # Alias de compatibilidad con posibles scripts de prueba
     _apply_mode = apply_operating_mode
 
     def _handle_ha_command(self, topic: str, payload: str) -> None:
-        """Interpreta i comandi ricevuti da Home Assistant (selettore o pulsanti)."""
+        """Interpreta los comandos recibidos desde Home Assistant (selector o botones)."""
         clean_payload = payload.strip()
         _log.info("Comando ricevuto da Home Assistant [%s]: %s", topic, clean_payload)
 
@@ -458,7 +458,7 @@ class AldesBridge:
             self.apply_operating_mode("W")
 
     def run_ha_mqtt_loop(self) -> None:
-        """Mantiene attiva la connessione verso il broker Mosquitto di Home Assistant."""
+        """Mantiene activa la conexión hacia el broker Mosquitto de Home Assistant."""
         host, port, username, password = detect_mqtt_broker(self.config)
         prefix = self.config.mqtt_prefix
 

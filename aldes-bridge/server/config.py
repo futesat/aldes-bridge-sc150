@@ -1,4 +1,4 @@
-"""Gestione della configurazione dell'add-on, delle traduzioni e del broker MQTT."""
+"""Gestión de la configuración del complemento, de las traducciones y del broker MQTT."""
 import json
 import logging
 import os
@@ -8,7 +8,7 @@ from typing import Optional
 
 _log = logging.getLogger("aldes-sc150")
 
-# Percorsi dei file persistenti salvati nella cartella di configurazione dell'add-on
+# Rutas de los archivos persistentes guardados en la carpeta de configuración del complemento
 TELEMETRY_CACHE_PATH = "/config/aldes/telemetry.json"
 FILTER_STORAGE_PATH = "/config/aldes/filters.json"
 APP_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,14 +16,14 @@ APP_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 @dataclass
 class BridgeConfig:
-    """Contiene tutti i parametri di avvio letti dalle variabili d'ambiente."""
+    """Contiene todos los parámetros de inicio leídos desde las variables de entorno."""
 
     listen_port: int = 18883
     mqtt_prefix: str = "aldes"
     language: str = "it"
     filter_months: int = 6
-    # Tempo di attesa (in secondi) prima di dichiarare la Connect Box disconnessa.
-    # Evita i falsi allarmi ogni 5 ore quando la Box rinnova la sessione TLS in 5 secondi.
+    # Tiempo de espera (en segundos) antes de declarar la Connect Box como desconectada.
+    # Evita falsas alarmas cada 5 horas cuando la Box renueva la sesión TLS en 5 segundos.
     disconnect_grace_seconds: int = 30
     ha_mqtt_host: str = ""
     ha_mqtt_port: int = 1883
@@ -32,7 +32,7 @@ class BridgeConfig:
 
     @classmethod
     def from_env(cls) -> "BridgeConfig":
-        """Crea la configurazione leggendo le variabili esportate da run.sh."""
+        """Crea la configuración leyendo las variables exportadas por run.sh."""
         return cls(
             listen_port=int(os.environ.get("MQTT_PORT") or 18883),
             mqtt_prefix="aldes",
@@ -47,7 +47,7 @@ class BridgeConfig:
 
 
 def load_translations(language: str = "it") -> dict:
-    """Carica il dizionario dei nomi entita' dal file JSON della lingua scelta."""
+    """Carga el diccionario de nombres de entidades desde el archivo JSON del idioma elegido."""
     file_path = os.path.join(APP_ROOT_DIR, "translations", f"{language}.json")
     if not os.path.isfile(file_path):
         file_path = os.path.join(APP_ROOT_DIR, "translations", "it.json")
@@ -60,10 +60,10 @@ def load_translations(language: str = "it") -> dict:
 
 
 def detect_mqtt_broker(config: BridgeConfig) -> tuple[str, int, Optional[str], Optional[str]]:
-    """Restituisce (host, port, username, password) del broker MQTT di Home Assistant.
+    """Devuelve (host, port, username, password) del broker MQTT de Home Assistant.
 
-    Se l'utente non ha inserito manualmente l'host nella scheda Configurazione,
-    interroga l'API interna del Supervisor di Home Assistant per ottenere i dati di Mosquitto.
+    Si el usuario no ha introducido manualmente el host en la pestaña Configuración,
+    consulta la API interna del Supervisor de Home Assistant para obtener los datos de Mosquitto.
     """
     if config.ha_mqtt_host:
         return config.ha_mqtt_host, config.ha_mqtt_port, config.ha_mqtt_user, config.ha_mqtt_password

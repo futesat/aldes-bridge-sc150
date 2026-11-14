@@ -1,4 +1,4 @@
-"""Punto di avvio principale dell'add-on Aldes Bridge SC150."""
+"""Punto de entrada principal del complemento Aldes Bridge SC150."""
 import logging
 import signal
 import sys
@@ -15,7 +15,7 @@ logging.basicConfig(
 
 
 def main() -> None:
-    """Inizializza la configurazione, avvia il listener TLS e il loop MQTT verso Home Assistant."""
+    """Inicializa la configuración, inicia el listener TLS y el bucle MQTT hacia Home Assistant."""
     config = BridgeConfig.from_env()
     bridge = AldesBridge(config=config)
 

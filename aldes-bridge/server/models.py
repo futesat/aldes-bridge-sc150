@@ -1,7 +1,7 @@
-"""Definizioni strutturate dei sensori e delle modalita' operative VMC.
+"""Definiciones estructuradas de los sensores y modos de funcionamiento de la VMC.
 
-Questo modulo sostituisce le vecchie tuple posizionali con oggetti leggibili.
-Per disattivare un sensore su Home Assistant basta impostare is_active=False.
+Este módulo sustituye las antiguas tuplas posicionales por objetos legibles.
+Para desactivar un sensor en Home Assistant basta con establecer is_active=False.
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -9,22 +9,22 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class SensorDefinition:
-    """Rappresenta la configurazione tecnica di un singolo sensore della VMC."""
+    """Representa la configuración técnica de un sensor individual de la VMC."""
 
-    sensor_id: str                        # ID univoco usato nei topic di Home Assistant
-    telemetry_key: str                    # Chiave esatta presente nel JSON inviato dalla Connect Box
-    unit: Optional[str] = None            # Unita' di misura (es. Â°C, mÂ³/h, rpm)
-    device_class: Optional[str] = None    # Classe dispositivo Home Assistant (es. temperature, power)
-    state_class: Optional[str] = None     # Classe statistica HA (es. measurement)
-    icon: str = "mdi:gauge"               # Icona Material Design (mdi:...)
-    enabled_by_default: bool = True       # Se False, il sensore viene creato ma nascosto di default
-    value_type: str = "string"            # Formato del valore: "float", "int" oppure "string"
-    is_active: bool = True                # Se False, il sensore viene rimosso da Home Assistant
+    sensor_id: str                        # ID único utilizado en los topics de Home Assistant
+    telemetry_key: str                    # Clave exacta presente en el JSON enviado por la Connect Box
+    unit: Optional[str] = None            # Unidad de medida (p. ej. °C, m³/h, rpm)
+    device_class: Optional[str] = None    # Clase de dispositivo de Home Assistant (p. ej. temperature, power)
+    state_class: Optional[str] = None     # Clase estadística de HA (p. ej. measurement)
+    icon: str = "mdi:gauge"               # Icono Material Design (mdi:...)
+    enabled_by_default: bool = True       # Si es False, el sensor se crea pero permanece oculto por defecto
+    value_type: str = "string"            # Formato del valor: "float", "int" o "string"
+    is_active: bool = True                # Si es False, el sensor se elimina de Home Assistant
 
 
-# Lista completa dei sensori letti dal payload JSON della Connect Box
+# Lista completa de sensores leídos del payload JSON de la Connect Box
 TELEMETRY_SENSORS: list[SensorDefinition] = [
-    # --- Temperature ---
+    # --- Temperaturas ---
     SensorDefinition(
         sensor_id="outside_tpt",
         telemetry_key="outside_tpt",
@@ -53,7 +53,7 @@ TELEMETRY_SENSORS: list[SensorDefinition] = [
         value_type="float",
     ),
 
-    # --- Portate d'aria e velocita' ventole ---
+    # --- Caudales de aire y velocidad de ventiladores ---
     SensorDefinition(
         sensor_id="extf_flw",
         telemetry_key="extf_flw",
@@ -94,7 +94,7 @@ TELEMETRY_SENSORS: list[SensorDefinition] = [
         value_type="int",
     ),
 
-    # --- Stato operativo e manutenzione ---
+    # --- Estado de funcionamiento y mantenimiento ---
     SensorDefinition(
         sensor_id="current_mode",
         telemetry_key="current_mode",
@@ -124,9 +124,9 @@ TELEMETRY_SENSORS: list[SensorDefinition] = [
         value_type="int",
     ),
 
-    # --- Diagnostica e Firmware ---
-    # Il sensore RSSI restituisce "--%%" fisso sulla Connect Box: lo lasciamo nel codice
-    # con is_active=False in modo che venga rimosso automaticamente da Home Assistant.
+    # --- Diagnóstico y Firmware ---
+    # El sensor RSSI devuelve "--%%" fijo en la Connect Box: se mantiene en el código
+    # con is_active=False para que se elimine automáticamente de Home Assistant.
     SensorDefinition(
         sensor_id="rssi",
         telemetry_key="RSSI",
@@ -148,7 +148,7 @@ TELEMETRY_SENSORS: list[SensorDefinition] = [
         value_type="string",
     ),
 
-    # --- Sensori opzionali (creati ma disabilitati di default su Home Assistant) ---
+    # --- Sensores opcionales (creados pero deshabilitados por defecto en Home Assistant) ---
     SensorDefinition(
         sensor_id="co2_vmc",
         telemetry_key="Co2_vmc",
